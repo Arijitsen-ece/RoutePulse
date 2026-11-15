@@ -1,0 +1,420 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (
+          exists(/databases/$(database)/documents/staff_roles/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/staff_roles/$(request.auth.uid)).data.role == 'admin'
+        ) ||
+        request.auth.token.email == 'arijitsenarijitsen58@gmail.com'
+      );
+    }
+
+    function isModerator() {
+      return isAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/staff_roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/staff_roles/$(request.auth.uid)).data.role == 'moderator'
+      );
+    }
+
+    function isOperator() {
+      return isAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/staff_roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/staff_roles/$(request.auth.uid)).data.role == 'operator'
+      );
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'language', 'role', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'language',
+          'manualLocationName', 'manualLocationLat', 'manualLocationLng',
+          'notifyDelays', 'notifyCancellations', 'notifyArrivals',
+          'role', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.language in ['en', 'hi', 'bn'] &&
+        data.role in ['passenger', 'moderator', 'operator', 'admin'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 256)) &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 120)) &&
+        (!('manualLocationName' in data) || (data.manualLocationName is string && data.manualLocationName.size() <= 120)) &&
+        (!('manualLocationLat' in data) || (data.manualLocationLat is number && data.manualLocationLat >= -90 && data.manualLocationLat <= 90)) &&
+        (!('manualLocationLng' in data) || (data.manualLocationLng is number && data.manualLocationLng >= -180 && data.manualLocationLng <= 180)) &&
+        (!('notifyDelays' in data) || data.notifyDelays is bool) &&
+        (!('notifyCancellations' in data) || data.notifyCancellations is bool) &&
+        (!('notifyArrivals' in data) || data.notifyArrivals is bool);
+    }
+
+    function isValidFcmToken(data) {
+      return data.keys().hasAll(['uid', 'token', 'language', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'token', 'language', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.token is string && data.token.size() >= 20 && data.token.size() <= 4096 &&
+        data.language in ['en', 'hi', 'bn'] &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidFavouriteRoute(data) {
+      return data.keys().hasAll(['userId', 'routeId', 'routeNumber', 'createdAt']) &&
+        data.keys().hasOnly(['userId', 'routeId', 'routeNumber', 'originName', 'destinationName', 'createdAt']) &&
+        isValidId(data.userId) &&
+        isValidId(data.routeId) &&
+        data.routeNumber is string && data.routeNumber.size() > 0 && data.routeNumber.size() <= 32 &&
+        data.createdAt is timestamp &&
+        (!('originName' in data) || (data.originName is string && data.originName.size() <= 120)) &&
+        (!('destinationName' in data) || (data.destinationName is string && data.destinationName.size() <= 120));
+    }
+
+    function isValidFavouriteStop(data) {
+      return data.keys().hasAll(['userId', 'stopId', 'stopName', 'createdAt']) &&
+        data.keys().hasOnly(['userId', 'stopId', 'stopName', 'locality', 'createdAt']) &&
+        isValidId(data.userId) &&
+        isValidId(data.stopId) &&
+        data.stopName is string && data.stopName.size() > 0 && data.stopName.size() <= 120 &&
+        data.createdAt is timestamp &&
+        (!('locality' in data) || (data.locality is string && data.locality.size() <= 120));
+    }
+
+    function isValidUserNotification(data) {
+      return data.keys().hasAll(['userId', 'title', 'body', 'read', 'createdAt']) &&
+        data.keys().hasOnly(['userId', 'title', 'body', 'routeId', 'read', 'createdAt']) &&
+        isValidId(data.userId) &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 160 &&
+        data.body is string && data.body.size() > 0 && data.body.size() <= 500 &&
+        data.read is bool &&
+        data.createdAt is timestamp &&
+        (!('routeId' in data) || isValidId(data.routeId));
+    }
+
+    function isValidPassengerReport(data) {
+      return data.keys().hasAll(['userId', 'routeId', 'stopId', 'reportType', 'verificationStatus', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['userId', 'routeId', 'stopId', 'reportType', 'note', 'verificationStatus', 'createdAt', 'updatedAt']) &&
+        isValidId(data.userId) &&
+        isValidId(data.routeId) &&
+        isValidId(data.stopId) &&
+        data.reportType in ['ARRIVAL_CONFIRMED', 'MISSING_BUS', 'BREAKDOWN', 'DELAY', 'DIVERSION'] &&
+        data.verificationStatus in ['PENDING', 'CONFIRMED', 'REJECTED', 'DUPLICATE'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        (!('note' in data) || (data.note is string && data.note.size() <= 400));
+    }
+
+    function isValidOperator(data) {
+      return data.keys().hasAll(['operatorId', 'name', 'shortCode', 'agencyType', 'updatedAt']) &&
+        data.keys().hasOnly(['operatorId', 'name', 'shortCode', 'agencyType', 'updatedAt']) &&
+        isValidId(data.operatorId) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+        data.shortCode is string && data.shortCode.size() > 0 && data.shortCode.size() <= 24 &&
+        data.agencyType in ['STATE_UNDERTAKING', 'PRIVATE_SYNDICATE', 'AC_EXPRESS'] &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidRoute(data) {
+      return data.keys().hasAll(['routeId', 'routeNumber', 'operatorId', 'origin', 'destination', 'firstDeparture', 'lastDeparture', 'active', 'updatedAt']) &&
+        data.keys().hasOnly([
+          'routeId', 'routeNumber', 'operatorId', 'origin', 'destination',
+          'firstDeparture', 'lastDeparture', 'timetableBasis', 'sourceLabel',
+          'active', 'updatedAt'
+        ]) &&
+        isValidId(data.routeId) &&
+        data.routeNumber is string && data.routeNumber.size() > 0 && data.routeNumber.size() <= 32 &&
+        isValidId(data.operatorId) &&
+        data.origin is string && data.origin.size() > 0 && data.origin.size() <= 120 &&
+        data.destination is string && data.destination.size() > 0 && data.destination.size() <= 120 &&
+        data.firstDeparture is string && data.firstDeparture.size() > 0 && data.firstDeparture.size() <= 16 &&
+        data.lastDeparture is string && data.lastDeparture.size() > 0 && data.lastDeparture.size() <= 16 &&
+        (!('timetableBasis' in data) || data.timetableBasis in [
+          'OFFICIAL_TIMETABLE', 'OFFICIAL_FREQUENCY', 'ESTIMATED_FREQUENCY',
+          'HISTORICAL_TIMETABLE', 'PASSENGER_OBSERVATION', 'SYNTHETIC_DEMO', 'UNAVAILABLE'
+        ]) &&
+        (!('sourceLabel' in data) || (data.sourceLabel is string && data.sourceLabel.size() <= 200)) &&
+        data.active is bool &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidServiceAlert(data) {
+      return data.keys().hasAll(['alertId', 'routeId', 'alertType', 'severity', 'title', 'description', 'sourceType', 'active', 'createdAt']) &&
+        data.keys().hasOnly([
+          'alertId', 'routeId', 'alertType', 'severity', 'title', 'description',
+          'sourceType', 'issuingOrganization', 'sourceUrl', 'active', 'createdAt'
+        ]) &&
+        isValidId(data.alertId) &&
+        isValidId(data.routeId) &&
+        data.alertType in [
+          'CANCELLATION', 'PARTIAL_CANCELLATION', 'DIVERSION', 'BREAKDOWN',
+          'DELAY', 'TRAFFIC_CONGESTION', 'WEATHER_DISRUPTION', 'ROUTE_SUSPENSION',
+          'SPECIAL_SERVICE', 'MISSING_WARNING'
+        ] &&
+        data.severity in ['CRITICAL', 'WARNING', 'INFO'] &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 160 &&
+        data.description is string && data.description.size() > 0 && data.description.size() <= 600 &&
+        data.sourceType in [
+          'OFFICIAL_VERIFIED', 'OPEN_LICENSED', 'COMMUNITY_REPORTED',
+          'ESTIMATED', 'SYNTHETIC_DEMO', 'UNVERIFIED'
+        ] &&
+        (!('issuingOrganization' in data) || (data.issuingOrganization is string && data.issuingOrganization.size() <= 160)) &&
+        (!('sourceUrl' in data) || (data.sourceUrl is string && data.sourceUrl.size() <= 300)) &&
+        data.active is bool &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidStaffRole(data) {
+      return data.keys().hasAll(['uid', 'role', 'grantedBy', 'grantedAt']) &&
+        data.keys().hasOnly(['uid', 'role', 'grantedBy', 'grantedAt']) &&
+        isValidId(data.uid) &&
+        data.role in ['passenger', 'moderator', 'operator', 'admin'] &&
+        isValidId(data.grantedBy) &&
+        data.grantedAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['logId', 'actorUid', 'actorRole', 'action', 'targetType', 'targetId', 'summary', 'createdAt']) &&
+        data.keys().hasOnly(['logId', 'actorUid', 'actorRole', 'action', 'targetType', 'targetId', 'summary', 'createdAt']) &&
+        isValidId(data.logId) &&
+        isValidId(data.actorUid) &&
+        data.actorRole in ['passenger', 'moderator', 'operator', 'admin'] &&
+        data.action is string && data.action.size() > 0 && data.action.size() <= 80 &&
+        data.targetType is string && data.targetType.size() > 0 && data.targetType.size() <= 40 &&
+        data.targetId is string && data.targetId.size() > 0 && data.targetId.size() <= 128 &&
+        data.summary is string && data.summary.size() > 0 && data.summary.size() <= 400 &&
+        data.createdAt is timestamp;
+    }
+
+    // Health check document for boot connection check
+    match /test/connection {
+      allow get: if true;
+    }
+
+    // Strict Admin RBAC collection
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create, update, delete: if isValidId(userId) && isAdmin();
+    }
+
+    // Granular Staff Roles RBAC collection
+    match /staff_roles/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isValidId(userId) &&
+        isAdmin() &&
+        isValidStaffRole(incoming()) &&
+        incoming().uid == userId &&
+        incoming().grantedBy == request.auth.uid &&
+        incoming().grantedAt == request.time;
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // Immutable Staff Audit Logs
+    match /admin_audit_logs/{logId} {
+      allow get: if isValidId(logId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(logId) &&
+        isAdmin() &&
+        isValidAuditLog(incoming()) &&
+        incoming().logId == logId &&
+        incoming().actorUid == request.auth.uid &&
+        incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // User Profiles (Strict PII Isolation)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isOwner(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        incoming().role == 'passenger' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().role == existing().role &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'language', 'manualLocationName',
+              'manualLocationLat', 'manualLocationLng',
+              'notifyDelays', 'notifyCancellations', 'notifyArrivals',
+              'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+
+      // Master-gated subcollection: Opt-in Web Push Tokens
+      match /fcm_tokens/{tokenId} {
+        allow get: if isValidId(userId) && isValidId(tokenId) && (isOwner(userId) || isAdmin());
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+        allow create, update: if isVerifiedUser() &&
+          isValidId(userId) && isValidId(tokenId) &&
+          isOwner(userId) &&
+          exists(/databases/$(database)/documents/users/$(userId)) &&
+          isValidFcmToken(incoming()) &&
+          incoming().uid == request.auth.uid &&
+          incoming().updatedAt == request.time;
+        allow delete: if isVerifiedUser() && isValidId(userId) && isValidId(tokenId) && (isOwner(userId) || isAdmin());
+      }
+
+      // Master-gated subcollection: Favourite Routes
+      match /favourite_routes/{routeId} {
+        allow get: if isValidId(userId) && isValidId(routeId) && (isOwner(userId) || isAdmin());
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isVerifiedUser() &&
+          isValidId(userId) && isValidId(routeId) &&
+          isOwner(userId) &&
+          exists(/databases/$(database)/documents/users/$(userId)) &&
+          isValidFavouriteRoute(incoming()) &&
+          incoming().userId == request.auth.uid &&
+          incoming().routeId == routeId &&
+          incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isVerifiedUser() && isValidId(userId) && isValidId(routeId) && (isOwner(userId) || isAdmin());
+      }
+
+      // Master-gated subcollection: Favourite Stops
+      match /favourite_stops/{stopId} {
+        allow get: if isValidId(userId) && isValidId(stopId) && (isOwner(userId) || isAdmin());
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isVerifiedUser() &&
+          isValidId(userId) && isValidId(stopId) &&
+          isOwner(userId) &&
+          exists(/databases/$(database)/documents/users/$(userId)) &&
+          isValidFavouriteStop(incoming()) &&
+          incoming().userId == request.auth.uid &&
+          incoming().stopId == stopId &&
+          incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isVerifiedUser() && isValidId(userId) && isValidId(stopId) && (isOwner(userId) || isAdmin());
+      }
+
+      // Master-gated subcollection: User Notifications
+      match /notifications/{notificationId} {
+        allow get: if isValidId(userId) && isValidId(notificationId) && (isOwner(userId) || isAdmin());
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(notificationId) &&
+          (isAdmin() || (isVerifiedUser() && isOwner(userId))) &&
+          exists(/databases/$(database)/documents/users/$(userId)) &&
+          isValidUserNotification(incoming()) &&
+          incoming().userId == userId &&
+          incoming().createdAt == request.time;
+        allow update: if isVerifiedUser() &&
+          isValidId(userId) && isValidId(notificationId) &&
+          isOwner(userId) &&
+          isValidUserNotification(incoming()) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+        allow delete: if isVerifiedUser() && isValidId(userId) && isValidId(notificationId) && (isOwner(userId) || isAdmin());
+      }
+    }
+
+    // Crowd-sourced Passenger Reports with moderator/admin lifecycle
+    match /passenger_reports/{reportId} {
+      allow get: if isValidId(reportId) && (
+        resource.data.verificationStatus == 'CONFIRMED' ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isModerator()
+      );
+      allow list: if resource.data.verificationStatus == 'CONFIRMED' ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isModerator();
+      allow create: if isVerifiedUser() &&
+        isValidId(reportId) &&
+        isValidPassengerReport(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().verificationStatus == 'PENDING' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() &&
+        isValidId(reportId) &&
+        isValidPassengerReport(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isModerator() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['verificationStatus', 'updatedAt'])
+          ) ||
+          (
+            existing().userId == request.auth.uid &&
+            existing().verificationStatus == 'PENDING' &&
+            incoming().verificationStatus == 'PENDING' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['note', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(reportId) && isAdmin();
+    }
+
+    // Publicly readable, Operator/Admin-managed transit catalog & service alerts
+    match /operators/{operatorId} {
+      allow get: if isValidId(operatorId);
+      allow list: if resource.data.operatorId is string;
+      allow create: if isOperator() && isValidId(operatorId) && isValidOperator(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isOperator() && isValidId(operatorId) && isValidOperator(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(operatorId);
+    }
+
+    match /routes/{routeId} {
+      allow get: if isValidId(routeId);
+      allow list: if resource.data.routeId is string;
+      allow create: if isOperator() && isValidId(routeId) && isValidRoute(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isOperator() && isValidId(routeId) && isValidRoute(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(routeId);
+    }
+
+    match /service_alerts/{alertId} {
+      allow get: if isValidId(alertId);
+      allow list: if resource.data.alertId is string;
+      allow create: if isOperator() && isValidId(alertId) && isValidServiceAlert(incoming()) && incoming().createdAt == request.time;
+      allow update: if isOperator() && isValidId(alertId) && isValidServiceAlert(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin() && isValidId(alertId);
+    }
+  }
+}

@@ -1,0 +1,522 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user account profile, language preference, home location, and notification settings.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "hi", "bn"]
+        },
+        "manualLocationName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "manualLocationLat": {
+          "type": "number"
+        },
+        "manualLocationLng": {
+          "type": "number"
+        },
+        "notifyDelays": {
+          "type": "boolean"
+        },
+        "notifyCancellations": {
+          "type": "boolean"
+        },
+        "notifyArrivals": {
+          "type": "boolean"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["passenger", "moderator", "operator", "admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "language", "role", "createdAt", "updatedAt"]
+    },
+    "FcmTokenRecord": {
+      "title": "FcmTokenRecord",
+      "description": "User opt-in Firebase Cloud Messaging web push token record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "token": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "hi", "bn"]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "token", "language", "updatedAt"]
+    },
+    "FavouriteRoute": {
+      "title": "FavouriteRoute",
+      "description": "User saved favourite transit route.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "routeId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "routeNumber": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "originName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "destinationName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "routeId", "routeNumber", "createdAt"]
+    },
+    "FavouriteStop": {
+      "title": "FavouriteStop",
+      "description": "User saved favourite bus stop.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "stopId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "stopName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "locality": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "stopId", "stopName", "createdAt"]
+    },
+    "UserNotification": {
+      "title": "UserNotification",
+      "description": "Targeted user service alert or arrival notification.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "routeId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "read": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "title", "body", "read", "createdAt"]
+    },
+    "PassengerReport": {
+      "title": "PassengerReport",
+      "description": "Crowd-sourced passenger bus arrival, missing bus, breakdown, delay, or diversion report.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "routeId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "stopId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "reportType": {
+          "type": "string",
+          "enum": ["ARRIVAL_CONFIRMED", "MISSING_BUS", "BREAKDOWN", "DELAY", "DIVERSION"]
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["PENDING", "CONFIRMED", "REJECTED", "DUPLICATE"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "routeId", "stopId", "reportType", "verificationStatus", "createdAt", "updatedAt"]
+    },
+    "TransitOperator": {
+      "title": "TransitOperator",
+      "description": "Public bus operator metadata.",
+      "type": "object",
+      "properties": {
+        "operatorId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "shortCode": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "agencyType": {
+          "type": "string",
+          "enum": ["STATE_UNDERTAKING", "PRIVATE_SYNDICATE", "AC_EXPRESS"]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["operatorId", "name", "shortCode", "agencyType", "updatedAt"]
+    },
+    "TransitRoute": {
+      "title": "TransitRoute",
+      "description": "GTFS-compatible route definition with explicit timetable provenance.",
+      "type": "object",
+      "properties": {
+        "routeId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "routeNumber": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "operatorId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "origin": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "destination": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "firstDeparture": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "lastDeparture": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "timetableBasis": {
+          "type": "string",
+          "enum": [
+            "OFFICIAL_TIMETABLE",
+            "OFFICIAL_FREQUENCY",
+            "ESTIMATED_FREQUENCY",
+            "HISTORICAL_TIMETABLE",
+            "PASSENGER_OBSERVATION",
+            "SYNTHETIC_DEMO",
+            "UNAVAILABLE"
+          ]
+        },
+        "sourceLabel": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["routeId", "routeNumber", "operatorId", "origin", "destination", "firstDeparture", "lastDeparture", "active", "updatedAt"]
+    },
+    "ServiceAlert": {
+      "title": "ServiceAlert",
+      "description": "Verified or demo transit service alert with explicit provenance.",
+      "type": "object",
+      "properties": {
+        "alertId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "routeId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "alertType": {
+          "type": "string",
+          "enum": [
+            "CANCELLATION",
+            "PARTIAL_CANCELLATION",
+            "DIVERSION",
+            "BREAKDOWN",
+            "DELAY",
+            "TRAFFIC_CONGESTION",
+            "WEATHER_DISRUPTION",
+            "ROUTE_SUSPENSION",
+            "SPECIAL_SERVICE",
+            "MISSING_WARNING"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["CRITICAL", "WARNING", "INFO"]
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "sourceType": {
+          "type": "string",
+          "enum": [
+            "OFFICIAL_VERIFIED",
+            "OPEN_LICENSED",
+            "COMMUNITY_REPORTED",
+            "ESTIMATED",
+            "SYNTHETIC_DEMO",
+            "UNVERIFIED"
+          ]
+        },
+        "issuingOrganization": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "sourceUrl": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["alertId", "routeId", "alertType", "severity", "title", "description", "sourceType", "active", "createdAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Explicit admin allowlist record for RBAC enforcement.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "grantedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "grantedAt"]
+    },
+    "StaffRole": {
+      "title": "StaffRole",
+      "description": "Granular staff RBAC assignment (moderator, operator, admin).",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["passenger", "moderator", "operator", "admin"]
+        },
+        "grantedBy": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "grantedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "role", "grantedBy", "grantedAt"]
+    },
+    "AdminAuditLog": {
+      "title": "AdminAuditLog",
+      "description": "Immutable staff audit trail for privileged actions.",
+      "type": "object",
+      "properties": {
+        "logId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorRole": {
+          "type": "string",
+          "enum": ["passenger", "moderator", "operator", "admin"]
+        },
+        "action": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "targetType": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "targetId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["logId", "actorUid", "actorRole", "action", "targetType", "targetId", "summary", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile and preferences isolated strictly to owner and admins."
+    },
+    "/users/{userId}/fcm_tokens/{tokenId}": {
+      "schema": { "$ref": "#/entities/FcmTokenRecord" },
+      "description": "Opt-in user web push tokens owned strictly by the user."
+    },
+    "/users/{userId}/favourite_routes/{routeId}": {
+      "schema": { "$ref": "#/entities/FavouriteRoute" },
+      "description": "Saved favourite routes for a user."
+    },
+    "/users/{userId}/favourite_stops/{stopId}": {
+      "schema": { "$ref": "#/entities/FavouriteStop" },
+      "description": "Saved favourite stops for a user."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/UserNotification" },
+      "description": "User-specific transit notifications."
+    },
+    "/passenger_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/PassengerReport" },
+      "description": "Crowd-sourced passenger transit reports with moderation lifecycle."
+    },
+    "/operators/{operatorId}": {
+      "schema": { "$ref": "#/entities/TransitOperator" },
+      "description": "Publicly readable, operator/admin-managed transit operator directory."
+    },
+    "/routes/{routeId}": {
+      "schema": { "$ref": "#/entities/TransitRoute" },
+      "description": "Publicly readable, operator/admin-managed transit route directory."
+    },
+    "/service_alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/ServiceAlert" },
+      "description": "Publicly readable, operator/admin-managed official service alerts."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Strict RBAC admin registry readable only by admins/self."
+    },
+    "/staff_roles/{userId}": {
+      "schema": { "$ref": "#/entities/StaffRole" },
+      "description": "Granular staff role registry readable by self or admins and writable only by admins."
+    },
+    "/admin_audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AdminAuditLog" },
+      "description": "Append-only staff action audit logs readable and creatable only by admins."
+    }
+  }
+}

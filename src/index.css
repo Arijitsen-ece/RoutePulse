@@ -1,0 +1,59 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-display: "Plus Jakarta Sans", "Noto Sans Bengali", "Noto Sans Devanagari", system-ui, sans-serif;
+    --font-sans: "DM Sans", "Noto Sans Bengali", "Noto Sans Devanagari", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --rp-navy: #0B1F3A;
+    --rp-navy-soft: #132D52;
+    --rp-teal: #0D9488;
+    --rp-surface: #FFFFFF;
+    --rp-canvas: #F8FAFC;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono-tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Ensure Leaflet map tiles and controls sit cleanly beneath floating UI overlays */
+.leaflet-container {
+  font-family: var(--font-sans);
+  z-index: 1;
+  background-color: #E2E8F0;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.14);
+  border: 1px solid #E2E8F0;
+}
+
+.leaflet-popup-content {
+  margin: 10px 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

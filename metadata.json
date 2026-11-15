@@ -1,0 +1,6 @@
+{
+  "name": "RoutePulse",
+  "description": "Multilingual public bus tracking, service verification, and journey assistance for Kolkata and West Bengal.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
